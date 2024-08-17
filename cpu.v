@@ -55,7 +55,7 @@ wire[7:0] bus;
 assign bus = 
     pc_out ? pc :
     ram_out ? ram[mar] :
-    ir_out ? ir[3:0] : //// ?
+    ir_out ? ir[3:0] : 
     a_out ? a_reg :
     b_out ? b_reg :
     alu_out ? alu :
@@ -67,7 +67,7 @@ always @(posedge cpu_clk) begin
     if (pc_add) begin
         pc <= pc + 1;
     end
-    if (pc > 13) begin
+    if (pc > 13) begin // Diesen Teil entfernen!!!
         pc <= 1;
     end
 end
@@ -134,9 +134,8 @@ always @(posedge cpu_clk) begin
     
 end
 
-// ...... WEITERE KOMPONENTEN
 
-//FETCH STAGE
+//Control Unit
 always @(negedge cpu_clk) begin
 
     pc_in <= 0;
@@ -201,9 +200,9 @@ always @(negedge cpu_clk) begin
        
 end
 
-
+// Programm
 initial begin
-       
+
 ram[0] = {LDA, 4'hF}; // 0001 1111
 ram[1] = {OUT, 4'h0}; // 0010 0000
 ram[2] = {ADD, 4'hF}; // 0011 1111
