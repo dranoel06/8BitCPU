@@ -1,6 +1,6 @@
-module cpu(input clk, output reg[7:0] output_register);
+module cpu(input clk, output reg[7:0] output_register, output reg[7:0] bus_viewer);
 
-parameter CLOCK_SPEED = 250000;
+parameter CLOCK_SPEED = 890000; // 890000 for 1 sec
 
 parameter LDA = 4'b0001;
 parameter ADD = 4'b0010;
@@ -21,7 +21,9 @@ reg b_out;
 reg alu_out;
 reg output_in;
 
-
+always @(posedge clk) begin
+    bus_viewer <= bus;
+end
 
 //Clock
 reg[31:0] clk_counter;
@@ -163,7 +165,7 @@ always @(negedge cpu_clk) begin
         pc_add <= 1;
     end  
     
-    else if (ir[7:4] == ADD) begin
+    else if (ir[7:4] == ADD) begin // ADD
         if (step == 3) begin
             ir_out <= 1;
             mar_in <= 1;
@@ -178,7 +180,7 @@ always @(negedge cpu_clk) begin
         end       
     
     end
-    else if (ir[7:4] == LDA) begin
+    else if (ir[7:4] == LDA) begin // LDA
         if (step == 3) begin
             ir_out <= 1;
             mar_in <= 1;
@@ -190,7 +192,7 @@ always @(negedge cpu_clk) begin
         end
     end
 
-    else if (ir[7:4] == OUT) begin 
+    else if (ir[7:4] == OUT) begin // OUT
 
         if (step == 3) begin
             a_out <= 1;
@@ -225,6 +227,7 @@ end
 
 endmodule
 
+/*
 module top(input clk, output reg[7:0] output_register);
 
     cpu test(clk, output_register);

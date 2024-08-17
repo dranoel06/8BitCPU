@@ -1,0 +1,40 @@
+IO_LOC  "bus_viewer_out[7]" 36;
+
+IO_LOC  "bus_viewer_out[6]" 39;
+
+IO_LOC  "bus_viewer_out[5]" 25;
+
+IO_LOC  "bus_viewer_out[4]" 26;
+
+IO_LOC  "bus_viewer_out[3]" 27;
+
+IO_LOC  "bus_viewer_out[2]" 29;
+
+IO_LOC  "bus_viewer_out[1]" 30;
+
+IO_LOC  "bus_viewer_out[0]" 33;
+
+IO_LOC  "digit_select[3]" 86;
+
+IO_LOC  "digit_select[2]" 55;
+
+IO_LOC  "digit_select[1]" 71;
+
+IO_LOC  "digit_select[0]" 70;
+
+IO_LOC  "display[6]" 49;
+
+IO_LOC  "display[5]" 32;
+
+IO_LOC  "display[4]" 68;
+
+IO_LOC  "display[3]" 57;
+
+IO_LOC  "display[2]" 56;
+
+IO_LOC  "display[1]" 31;
+
+IO_LOC  "display[0]" 69;
+
+IO_LOC  "clk" 52;
+IO_PORT "clk" IO_TYPE=LVCMOS33 PULL_MODE=UP;
