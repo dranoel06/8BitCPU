@@ -19,8 +19,11 @@ reg b_out;
 reg alu_out;
 reg output_in;
 
+
+
 //Clock
 reg[31:0] clk_counter;
+reg cpu_clk;
 always @(posedge clk) begin
 
     clk_counter <= clk_counter + 1;
@@ -38,8 +41,17 @@ always @(posedge clk) begin
         cpu_clk <= 0;
     end
 
+end
+
+
+// DEBUGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGERRRRRRRRRRRRRRRRRRRRRRR
+/*always @(posedge cpu_clk) begin
+
+    output_register <= bus;
     
 end
+*/
+
 
 
 // Instruction Step Counter
@@ -51,7 +63,6 @@ always @(posedge cpu_clk) begin
         step <= 0;   
     end
 
-
 end
 
 
@@ -62,13 +73,13 @@ assign bus =
     pc_out ? pc :
     ram_out ? ram[mar] :
     ir_out ? ir[3:0] : //// ?
-    a_out ? a :
-    b_out ? b :
+    a_out ? a_reg :
+    b_out ? b_reg :
     alu_out ? alu :
-    8'h00;
+    8'b0;
 
 // Programm Counter
-reg[7:0] pc =0;
+reg[7:0] pc;
 always @(posedge cpu_clk) begin
     if (pc_add) begin
         pc <= pc + 1;
@@ -76,8 +87,9 @@ always @(posedge cpu_clk) begin
 
 end
 
+
 // Memory Adress Register
-reg[7:0] mar;
+reg[3:0] mar;
 always @(posedge cpu_clk) begin
     if (mar_in) begin
         mar <= bus[3:0];      
@@ -87,11 +99,13 @@ end
 
 //RAM
 reg[7:0] ram[16];
+/*
 always @(posedge cpu_clk) begin
     if (ram_in) begin
         ram[mar] <= bus;
     end
 end
+*/
 
 //Instruction Register
 reg[7:0] ir;
@@ -107,8 +121,11 @@ always @(posedge cpu_clk) begin
     if (output_in) begin
         output_register <= bus;
     end
+  
     
 end
+
+
 
 //A Register
 reg[7:0] a_reg;
@@ -140,11 +157,28 @@ end
 
 //FETCH STAGE
 always @(negedge cpu_clk) begin
+    if (step == 1) begin
+        pc_out <= 1;
+        mar_in <= 1;
+    end
+    else if (step == 2) begin
+        ram_out <= 1;
+        ir_in <= 1;
+        pc_add <= 1;
+    end
+    else begin
+        pc_out <= 0;
+        mar_in <= 0;
+        ram_out <= 0;
+        ir_in <= 0;
+        pc_add <= 0;
+    end
+    
+/*    
     case (step)
         1: begin
           pc_out <= 1;
           mar_in <= 1;
-          ram_in <= 1;
         end
         2: begin
           ram_out <= 1;
@@ -153,35 +187,74 @@ always @(negedge cpu_clk) begin
         end
         //default: 
     endcase
+*/
+
 end
 
 //Control Unit
 always @(negedge cpu_clk) begin
     if (ir[7:4] == ADD) begin
+        if (step == 3) begin
+            ir_out <= 1;
+            mar_in <= 1;
+        end
+        else if (step == 4) begin
+            ram_out <= 1;
+            b_in <= 1;
+        end
+        else if (step == 5) begin
+            alu_out <= 1;
+            a_in <= 1;
+        end
+        else begin
+            ir_out <= 0;
+            mar_in <= 0;
+            ram_out <= 0;
+            b_in <= 0;
+            alu_out <= 0;
+            a_in <= 0;
+        end
+
+/*
         case (step)
             3: begin
               ir_out <= 1;
               mar_in <= 1;
-              ram_in <= 1;
             end
             4: begin
-              ram_out <= 1;
-              b_in <= 1;
+              ir_out <= 1;
+              mar_in <= 1;
             end
             5: begin
-              alu_out <= 1;
-              a_in <= 1;
+              ir_out <= 1;
+              mar_in <= 1;
             end
             //default: 
         endcase
-        
+*/
+    
     end
-    if (it[7:4] == LDA) begin
+    if (ir[7:4] == LDA) begin
+        if (step == 3) begin
+            ir_out <= 1;
+            mar_in <= 1;
+        end
+        else if (step == 4) begin
+            ram_out <= 1;
+            a_in <= 1;
+        end
+        else begin
+            ir_out <= 0;
+            mar_in <= 0;
+            ram_out <= 0;
+            a_in <= 0;
+        end
+
+/*
         case (step)
             3: begin
               ir_out <= 1;
               mar_in <= 1;
-              ram_in <= 1;
             end
             4: begin
               ram_out <= 1;
@@ -189,9 +262,21 @@ always @(negedge cpu_clk) begin
             end 
             //default: 
         endcase
-        
+ */
+
     end
-    if (ir[7:4] == OUT) begin
+    if (ir[7:4] == OUT) begin 
+
+        if (step == 3) begin
+            a_out <= 1;
+            output_in <= 1;
+        end
+        else begin
+            a_out <= 0;
+            output_in <= 0;
+        end
+
+/*
         case (step)
             3: begin
                 a_out <= 1;
@@ -199,36 +284,37 @@ always @(negedge cpu_clk) begin
             end 
             //default: 
         endcase
-        
+*/        
     end
     
     
 end
+
 initial begin
     
 
 mem[0] = {LDA, 4'hF};
-mem[1] = {OUT, 4'h0}; 
+mem[1] = {ADD, 4'h0}; 
 mem[2] = {ADD, 4'hF}; 
-mem[3] = {OUT, 4'h0}; 
+mem[3] = {ADD, 4'h0}; 
 mem[4] = {ADD, 4'hF}; 
-mem[5] = {OUT, 4'h0}; 
+mem[5] = {ADD, 4'h0}; 
 mem[6] = {ADD, 4'hF}; 
-mem[7] = {OUT, 4'h0}; 
+mem[7] = {ADD, 4'h0}; 
 mem[8] = {ADD, 4'hF}; 
-mem[9] = {OUT, 4'h0}; 
+mem[9] = {ADD, 4'h0}; 
 mem[10] = {ADD, 4'hF}; 
-mem[11] = {OUT, 4'h0};
+mem[11] = {ADD, 4'h0};
 mem[12] = {ADD, 4'hF};
-mem[13] = {OUT, 4'h0};
+mem[13] = {ADD, 4'h0};
 mem[14] = {ADD, 4'hF};
-mem[15] = 8'b00000001;
+mem[15] = {8'h01};
 
 end
 
 endmodule
 
-module top(input clk, output reg [7:0] output_register);
+module top(input clk, output reg[7:0] output_register);
 
     cpu test(clk, output_register);
 
