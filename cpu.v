@@ -1,13 +1,10 @@
 module cpu(input clk, output  output_register;);
 
-localparam STATE_FETCH_START = 0;
-localparam STATE_MEM_START = 1;
+localparam STATE_FETCH = 0;
+localparam STATE_MEM = 1;
 localparam STATE_DECODE = 2;
 localparam STATE_EXECUTE = 3;
 localparam STATE_WRITE_BACK = 4;
-
-reg state[4:0];
-
 reg pc_in;
 reg pc_out;
 reg pc_add;
@@ -22,6 +19,17 @@ reg b_in;
 reg b_out;
 reg alu_out;
 reg output_in;
+
+reg state[4:0];
+always @(posedge clk) begin
+    if (state == 10) begin
+        state <= 0;
+    else 
+        state <= state + 1;
+    end
+end
+
+
 
 // Bus
 wire[7:0] bus;
@@ -55,11 +63,30 @@ end
 reg[7:0] ram[16];
 always @(posedge clk) begin
     if (ram_in) begin
-        ram[mar] <0 bus;
+        ram[mar] <= bus;
     end
 end
 
 //Instruction Register
+reg[7:0] ir;
+always @(posedge clk) begin
+    if (ir_in) begin
+        ir <= bus;
+    end
+end
+
+// ...... WEITERE KOMPONENTEN
+
+//Control Unit
+always @(posedge clk) begin
+    if (state == STATE_FETCH) begin
+        pc_out <= 1;
+        mar_in <= 1;
+    end
+    if (state == ) begin
+        
+    end
+end
 
 
 endmodule
