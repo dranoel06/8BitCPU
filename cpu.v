@@ -1,11 +1,13 @@
 module cpu(input clk, output reg[7:0] output_register, output reg[7:0] bus_viewer);
 
-parameter CLOCK_SPEED = 1200000; // 480000 for 1 sec
+parameter CLOCK_SPEED = 1000000; // 480000 for 1 sec
 
+parameter NOP = 4'b0000;
 parameter LDA = 4'b0001;
 parameter ADD = 4'b0010;
 parameter OUT = 4'b0011;
 parameter JMP = 4'b0100;
+parameter STA = 4'b0101;
 
 reg pc_in;
 reg pc_out;
@@ -21,6 +23,8 @@ reg b_in;
 reg b_out;
 reg alu_out;
 reg output_in;
+
+reg[3:0] step_limit;
 
 always @(posedge clk) begin
     bus_viewer <= bus;
@@ -46,8 +50,11 @@ reg[5:0] step;
 always @(posedge cpu_clk) begin
     step <= step + 1;
 
-    if (step > 5) begin
+    if (step > step_limit) begin
         step <= 0;   
+    end
+    else if (step > 6) begin
+        step <= 0;
     end
 end
 
@@ -160,6 +167,8 @@ always @(negedge cpu_clk) begin
     alu_out <= 0;
     output_in <= 0;
 
+    step_limit <= 6;
+
     if (step == 1) begin
         pc_out <= 1;
         mar_in <= 1;
@@ -171,6 +180,7 @@ always @(negedge cpu_clk) begin
     end  
     
     else if (ir[7:4] == ADD) begin // ADD
+    step_limit <= 5;
         if (step == 3) begin
             ir_out <= 1;
             mar_in <= 1;
@@ -186,6 +196,7 @@ always @(negedge cpu_clk) begin
     
     end
     else if (ir[7:4] == LDA) begin // LDA
+    step_limit <= 4;
         if (step == 3) begin
             ir_out <= 1;
             mar_in <= 1;
@@ -197,8 +208,20 @@ always @(negedge cpu_clk) begin
         end
     end
 
-    else if (ir[7:4] == OUT) begin // OUT
+    else if (ir[7:4] == STA) begin // STA
+    step_limit <= 4;
+        if (step == 3) begin
+            ir_out <= 1;
+            mar_in <= 1;
+        end
+        else if (step == 4) begin
+            a_out <= 1;
+            ram_in <= 1;
+        end
+    end
 
+    else if (ir[7:4] == OUT) begin // OUT
+    step_limit <= 3;
         if (step == 3) begin
             a_out <= 1;
             output_in <= 1;
@@ -206,10 +229,15 @@ always @(negedge cpu_clk) begin
     end
 
     else if (ir[7:4] == JMP) begin // JMP
+    step_limit <= 3;
         if (step == 3) begin
             ir_out <= 1;
             pc_in <= 1;
         end
+    end
+
+    else if (ir[7:4] == NOP) begin
+        step_limit <= 5;
     end
        
 end
@@ -217,21 +245,27 @@ end
 // Programm
 initial begin
 
-ram[0] = {LDA, 4'h5}; // 0001 1111
+
+ram[0] = {LDA, 4'h06}; // 0001 1111
+ram[1] = {OUT, 4'h00}; // 0010 0000
+ram[2] = {ADD, 4'h06}; // 0011 1111
+ram[3] = {STA, 4'h07};
+ram[4] = {LDA, 4'h07};
+ram[5] = {JMP, 4'h01}; 
+ram[6] = {8'h01};
+
+/*
+ram[0] = {LDA, 4'h6}; // 0001 1111
 ram[1] = {OUT, 4'h0}; // 0010 0000
-ram[2] = {ADD, 4'h5}; // 0011 1111
-ram[3] = {OUT, 4'h0}; 
-ram[4] = {JMP, 4'h1}; 
-ram[5] = {8'd1};
+ram[2] = {ADD, 4'h6}; // 0011 1111
+ram[3] = {OUT, 4'h0};
+ram[4] = {STA, 4'h7};
+ram[5] = {JMP, 4'h1}; 
+ram[6] = {8'd1};
+ram[7] = {8'hF};
+*/
 
 end
 
-
-endmodule
-
-/*
-module top(input clk, output reg[7:0] output_register);
-
-    cpu test(clk, output_register);
 
 endmodule
