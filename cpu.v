@@ -1,10 +1,11 @@
 module cpu(input clk, output reg[7:0] output_register, output reg[7:0] bus_viewer);
 
-parameter CLOCK_SPEED = 890000; // 890000 for 1 sec
+parameter CLOCK_SPEED = 1200000; // 480000 for 1 sec
 
 parameter LDA = 4'b0001;
 parameter ADD = 4'b0010;
 parameter OUT = 4'b0011;
+parameter JMP = 4'b0100;
 
 reg pc_in;
 reg pc_out;
@@ -69,9 +70,13 @@ always @(posedge cpu_clk) begin
     if (pc_add) begin
         pc <= pc + 1;
     end
-    if (pc > 13) begin // Diesen Teil entfernen!!!
+    if (pc_in) begin 
+        pc <= {4'b0, bus[3:0]};
+    end
+    if (pc > 254) begin // Why !?????
         pc <= 1;
     end
+    
 end
 
 
@@ -199,28 +204,25 @@ always @(negedge cpu_clk) begin
             output_in <= 1;
         end
     end
+
+    else if (ir[7:4] == JMP) begin // JMP
+        if (step == 3) begin
+            ir_out <= 1;
+            pc_in <= 1;
+        end
+    end
        
 end
 
 // Programm
 initial begin
 
-ram[0] = {LDA, 4'hF}; // 0001 1111
+ram[0] = {LDA, 4'h5}; // 0001 1111
 ram[1] = {OUT, 4'h0}; // 0010 0000
-ram[2] = {ADD, 4'hF}; // 0011 1111
+ram[2] = {ADD, 4'h5}; // 0011 1111
 ram[3] = {OUT, 4'h0}; 
-ram[4] = {ADD, 4'hF}; 
-ram[5] = {OUT, 4'h0}; 
-ram[6] = {ADD, 4'hF}; 
-ram[7] = {OUT, 4'h0}; 
-ram[8] = {ADD, 4'hF}; 
-ram[9] = {OUT, 4'h0}; 
-ram[10] = {ADD, 4'hF}; 
-ram[11] = {OUT, 4'h0};
-ram[12] = {ADD, 4'hF};
-ram[13] = {OUT, 4'h0};
-ram[14] = {ADD, 4'hF};
-ram[15] = {8'd1};
+ram[4] = {JMP, 4'h1}; 
+ram[5] = {8'd1};
 
 end
 
