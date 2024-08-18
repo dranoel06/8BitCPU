@@ -1,6 +1,6 @@
-module cpu(input clk, output reg[7:0] output_register, output reg[7:0] bus_viewer);
+module cpu(input clk, button, output reg[7:0] output_register, output reg[7:0] bus_viewer);
 
-parameter CLOCK_SPEED = 1000000; // 480000 for 1 sec
+parameter CLOCK_SPEED = 1800000; // 480000 for 1 sec
 
 parameter NOP = 4'b0000;
 parameter LDA = 4'b0001;
@@ -16,7 +16,7 @@ reg mar_in;
 reg ram_in;
 reg ram_out;
 reg ir_in;
-reg ir_out;
+reg ir_out; //
 reg a_in;
 reg a_out;
 reg b_in;
@@ -26,10 +26,25 @@ reg output_in;
 
 reg[3:0] step_limit;
 
+/*
 always @(posedge clk) begin
-    bus_viewer <= bus;
+    bus_viewer <= button_counter;
 end
+*/
 
+
+// Button
+assign cpu_clk = button;
+assign bus_viewer[0] = alu_out;
+assign bus_viewer[1] = b_out;
+assign bus_viewer[2] = a_out;
+assign bus_viewer[3] = ir_out;
+assign bus_viewer[4] = ram_out;
+assign bus_viewer[5] = pc_out;
+
+
+
+/*
 //Clock
 reg[31:0] clk_counter;
 reg cpu_clk;
@@ -43,17 +58,17 @@ always @(posedge clk) begin
     cpu_clk <= (clk_counter < CLOCK_SPEED/2) ? 1 : 0;
 end
 
-
+*/
 
 // Instruction Step Counter
 reg[5:0] step;
-always @(posedge cpu_clk) begin
+always @(posedge cpu_clk) begin // negedge ?????
     step <= step + 1;
 
     if (step > step_limit) begin
         step <= 0;   
     end
-    else if (step > 6) begin
+    else if (step > 7) begin
         step <= 0;
     end
 end
@@ -167,8 +182,6 @@ always @(negedge cpu_clk) begin
     alu_out <= 0;
     output_in <= 0;
 
-    step_limit <= 6;
-
     if (step == 1) begin
         pc_out <= 1;
         mar_in <= 1;
@@ -180,7 +193,7 @@ always @(negedge cpu_clk) begin
     end  
     
     else if (ir[7:4] == ADD) begin // ADD
-    step_limit <= 5;
+    step_limit <= 6;
         if (step == 3) begin
             ir_out <= 1;
             mar_in <= 1;
@@ -196,7 +209,7 @@ always @(negedge cpu_clk) begin
     
     end
     else if (ir[7:4] == LDA) begin // LDA
-    step_limit <= 4;
+    step_limit <= 5;
         if (step == 3) begin
             ir_out <= 1;
             mar_in <= 1;
@@ -246,6 +259,16 @@ end
 initial begin
 
 
+
+ram[0] = {LDA, 4'h5}; // 0001 1111
+ram[1] = {OUT, 4'h0}; // 0010 0000
+ram[2] = {ADD, 4'h5}; // 0011 1111
+ram[3] = {STA, 4'h5};
+ram[4] = {JMP, 4'h1};
+ram[5] = {8'h01}; 
+
+
+/*
 ram[0] = {LDA, 4'h06}; // 0001 1111
 ram[1] = {OUT, 4'h00}; // 0010 0000
 ram[2] = {ADD, 4'h06}; // 0011 1111
@@ -253,6 +276,7 @@ ram[3] = {STA, 4'h07};
 ram[4] = {LDA, 4'h07};
 ram[5] = {JMP, 4'h01}; 
 ram[6] = {8'h01};
+*/
 
 /*
 ram[0] = {LDA, 4'h6}; // 0001 1111
