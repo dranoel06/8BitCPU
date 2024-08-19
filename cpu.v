@@ -1,6 +1,6 @@
 module cpu(input clk, button, output reg[7:0] output_register, output reg[7:0] bus_viewer);
 
-parameter CLOCK_SPEED = 1400000; // 480000 for 1 sec
+parameter CLOCK_SPEED = 800000; // 480000 for 1 sec
 
 parameter NOP = 4'b1111;
 parameter LDA = 4'b0001;
@@ -31,11 +31,19 @@ always @(posedge clk) begin
     bus_viewer <= bus;
 end
 
+//Bad Reset Button
+reg reset;
+reg button_counter;
+always @(posedge button) begin
+    button_counter <= button_counter + 1;
+    reset <= (button_counter < 1) ? 0 : 1;
+end
+
 
 /*
 // Button
 assign cpu_clk = button;
-assign bus_viewer[0] = alu_out;
+assign bus_viewer = step;
 */
 
 
@@ -88,6 +96,9 @@ always @(posedge cpu_clk) begin
     end
     if (pc_in) begin 
         pc <= {4'b0, bus[3:0]};
+    end
+    if (reset) begin
+        pc <= 0;
     end
 
     
@@ -182,7 +193,7 @@ always @(negedge cpu_clk) begin
     end  
     
     else if (ir[7:4] == ADD) begin // ADD
-    step_limit <= 5;
+    step_limit <= 6;
         if (step == 3) begin
             ir_out <= 1;
             mar_in <= 1;
@@ -191,7 +202,7 @@ always @(negedge cpu_clk) begin
             ram_out <= 1;
             b_in <= 1;
         end
-        else if (step == 5) begin
+        else if (step == 6) begin
             alu_out <= 1;
             a_in <= 1;
         end       
@@ -246,10 +257,16 @@ end
 
 // Programm
 initial begin
-pc = 0;
-state = 1;
+/*
+ram[0] = {LDA, 4'h5}; 
+ram[1] = {OUT, 4'h0}; 
+ram[2] = {ADD, 4'h5}; 
+ram[3] = {STA, 4'h5};
+ram[4] = {JMP, 4'h0};
+ram[5] = {8'h01};
+*/
 
-
+/*
 ram[0] = {LDA, 4'h7}; 
 ram[1] = {STA, 4'h8}; 
 ram[2] = {LDA, 4'h8}; 
@@ -257,30 +274,14 @@ ram[3] = {OUT, 4'h0};
 ram[4] = {ADD, 4'h8};
 ram[5] = {STA, 4'h8};
 ram[6] = {JMP, 4'h2};
-
 ram[7] = {8'h01}; 
-
-
-/*
-ram[0] = {LDA, 4'h06}; // 0001 1111
-ram[1] = {OUT, 4'h00}; // 0010 0000
-ram[2] = {ADD, 4'h06}; // 0011 1111
-ram[3] = {STA, 4'h07};
-ram[4] = {LDA, 4'h07};
-ram[5] = {JMP, 4'h01}; 
-ram[6] = {8'h01};
-
-
-/*
-ram[0] = {LDA, 4'h6}; // 0001 1111
-ram[1] = {OUT, 4'h0}; // 0010 0000
-ram[2] = {ADD, 4'h6}; // 0011 1111
-ram[3] = {OUT, 4'h0};
-ram[4] = {STA, 4'h7};
-ram[5] = {JMP, 4'h1}; 
-ram[6] = {8'd1};
-ram[7] = {8'hF};
 */
+
+ram[0] = {LDA, 4'h4}; 
+ram[1] = {OUT, 4'h0}; 
+ram[2] = {ADD, 4'h4}; 
+ram[3] = {JMP, 4'h1};
+ram[4] = {8'h01}; 
 
 end
 
