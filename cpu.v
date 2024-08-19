@@ -1,6 +1,6 @@
 module cpu(input clk, button, output reg[7:0] output_register, output reg[7:0] bus_viewer);
 
-parameter CLOCK_SPEED = 700000; // 480000 for 1 sec
+parameter CLOCK_SPEED = 1400000; // 480000 for 1 sec
 
 parameter NOP = 4'b1111;
 parameter LDA = 4'b0001;
@@ -28,7 +28,7 @@ reg[3:0] step_limit;
 
 
 always @(posedge clk) begin
-    bus_viewer <= b_reg;
+    bus_viewer <= bus;
 end
 
 
