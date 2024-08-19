@@ -2,12 +2,12 @@ module cpu(input clk, button, output reg[7:0] output_register, output reg[7:0] b
 
 parameter CLOCK_SPEED = 800000; // 480000 for 1 sec
 
-parameter NOP = 4'b1111;
 parameter LDA = 4'b0001;
 parameter ADD = 4'b0010;
 parameter OUT = 4'b0011;
 parameter JMP = 4'b0100;
 parameter STA = 4'b0101;
+parameter LDI = 4'b0110;
 
 reg pc_in;
 reg pc_out;
@@ -18,6 +18,7 @@ reg ram_out;
 reg ir_in;
 reg ir_out; 
 reg a_in;
+reg a_imm_in;
 reg a_out;
 reg b_in;
 reg b_out;
@@ -146,6 +147,9 @@ always @(posedge cpu_clk) begin
     if (a_in) begin
         a_reg <= bus;
     end
+    else if (a_imm_in) begin
+        a_reg <= {4'b0, bus[3:0]};
+    end
     
 end
 //B Register
@@ -176,6 +180,7 @@ always @(negedge cpu_clk) begin
     ir_in <= 0;
     ir_out <= 0;
     a_in <= 0;
+    a_imm_in <= 0;
     a_out <= 0;
     b_in <= 0;
     b_out <= 0;
@@ -206,18 +211,25 @@ always @(negedge cpu_clk) begin
             alu_out <= 1;
             a_in <= 1;
         end       
-    
     end
+
     else if (ir[7:4] == LDA) begin // LDA
     step_limit <= 4;
         if (step == 3) begin
             ir_out <= 1;
             mar_in <= 1;
         end
-
         else if (step == 4) begin
             ram_out <= 1;
             a_in <= 1;
+        end
+    end
+
+    else if (ir[7:4] == LDI) begin // LDI
+        step_limit <= 3;
+        if (step == 3) begin
+            ir_out <= 1;
+            a_imm_in <= 1;
         end
     end
 
@@ -249,25 +261,31 @@ always @(negedge cpu_clk) begin
         end
     end
 
-    else if (ir[7:4] == NOP) begin
-        step_limit <= 5;
-    end
        
 end
 
 // Programm
 initial begin
-/*
-ram[0] = {LDA, 4'h5}; 
-ram[1] = {OUT, 4'h0}; 
-ram[2] = {ADD, 4'h5}; 
-ram[3] = {STA, 4'h5};
-ram[4] = {JMP, 4'h0};
-ram[5] = {8'h01};
-*/
+
+ram[0] = {LDI, 4'h1}; // Fibonacci
+ram[1] = {STA, 4'hD}; 
+ram[2] = {LDI, 4'h0}; 
+ram[3] = {STA, 4'hE};
+ram[4] = {LDA, 4'hD}; 
+ram[5] = {ADD, 4'hE};  
+ram[6] = {OUT, 4'h0}; 
+ram[7] = {STA, 4'hF}; 
+ram[8] = {LDA, 4'hD};
+ram[9] = {STA, 4'hE}; 
+ram[10] = {LDA, 4'hF};  
+ram[11] = {STA, 4'hD}; 
+ram[12] = {JMP, 4'h4}; 
+ram[13] = {8'h01};      
+ram[14] = {8'h00};      
+
 
 /*
-ram[0] = {LDA, 4'h7}; 
+ram[0] = {LDA, 4'h7}; // 2^x
 ram[1] = {STA, 4'h8}; 
 ram[2] = {LDA, 4'h8}; 
 ram[3] = {OUT, 4'h0};
@@ -277,11 +295,13 @@ ram[6] = {JMP, 4'h2};
 ram[7] = {8'h01}; 
 */
 
-ram[0] = {LDA, 4'h4}; 
+/*
+ram[0] = {LDA, 4'h4};  // Count Up
 ram[1] = {OUT, 4'h0}; 
 ram[2] = {ADD, 4'h4}; 
 ram[3] = {JMP, 4'h1};
 ram[4] = {8'h01}; 
+*/
 
 end
 
