@@ -1,6 +1,6 @@
 module cpu(input clk, button, output reg[7:0] output_register, output reg[7:0] bus_viewer);
 
-parameter CLOCK_SPEED = 800000; // 480000 for 1 sec
+parameter CLOCK_SPEED = 300000; // 480000 for 1 sec
 
 parameter LDA = 4'b0001;
 parameter ADD = 4'b0010;
@@ -8,6 +8,7 @@ parameter OUT = 4'b0011;
 parameter JMP = 4'b0100;
 parameter STA = 4'b0101;
 parameter LDI = 4'b0110;
+parameter SUB = 4'b0111;
 
 reg pc_in;
 reg pc_out;
@@ -30,14 +31,7 @@ reg[3:0] step_limit;
 
 always @(posedge clk) begin
     bus_viewer <= bus;
-end
 
-//Bad Reset Button
-reg reset;
-reg button_counter;
-always @(posedge button) begin
-    button_counter <= button_counter + 1;
-    reset <= (button_counter < 1) ? 0 : 1;
 end
 
 
@@ -45,13 +39,14 @@ end
 // Button
 assign cpu_clk = button;
 assign bus_viewer = step;
+assign output_register = alu;
 */
-
 
 
 //Clock
 reg[31:0] clk_counter;
 reg cpu_clk;
+
 always @(posedge clk) begin
     clk_counter <= clk_counter + 1;
 
@@ -98,10 +93,6 @@ always @(posedge cpu_clk) begin
     if (pc_in) begin 
         pc <= {4'b0, bus[3:0]};
     end
-    if (reset) begin
-        pc <= 0;
-    end
-
     
 end
 
@@ -163,8 +154,18 @@ end
 
 //ALU
 reg[7:0] alu;
+reg alu_sub;
+reg [1:0] alu_op;
 always @(posedge cpu_clk) begin
-    alu <= a_reg + b_reg;  
+    
+    if (alu_op == 1) begin
+        alu <= a_reg + b_reg;
+    end
+    else if (alu_op == 2) begin
+        alu <= a_reg - b_reg;
+    end
+    else alu <= a_reg;
+     
 end
 
 
@@ -208,6 +209,24 @@ always @(negedge cpu_clk) begin
             b_in <= 1;
         end
         else if (step == 6) begin
+            alu_out <= 1;
+            alu_op <= 1;
+            a_in <= 1;
+        end       
+    end
+    
+    else if (ir[7:4] == SUB) begin // SUB
+    step_limit <= 6;
+        if (step == 3) begin
+            ir_out <= 1;
+            mar_in <= 1;
+        end
+        else if (step == 4) begin
+            ram_out <= 1;
+            b_in <= 1;
+        end
+        else if (step == 6) begin
+            alu_op <= 2;
             alu_out <= 1;
             a_in <= 1;
         end       
@@ -301,6 +320,14 @@ ram[1] = {OUT, 4'h0};
 ram[2] = {ADD, 4'h4}; 
 ram[3] = {JMP, 4'h1};
 ram[4] = {8'h01}; 
+
+
+ram[0] = {LDA, 4'h5};  // Count Down
+ram[1] = {OUT, 4'h0}; 
+ram[2] = {SUB, 4'h4}; 
+ram[3] = {JMP, 4'h1};
+ram[4] = {8'h01}; 
+ram[5] = {8'hFF};
 */
 
 end
