@@ -2,13 +2,15 @@ module cpu(input clk, button, output reg[7:0] output_register, output reg[7:0] b
 
 parameter CLOCK_SPEED = 300000; // 480000 for 1 sec
 
-parameter LDA = 4'b0001;
-parameter ADD = 4'b0010;
-parameter OUT = 4'b0011;
-parameter JMP = 4'b0100;
-parameter STA = 4'b0101;
-parameter LDI = 4'b0110;
-parameter SUB = 4'b0111;
+parameter LDA = 3'b001;
+parameter ADD = 3'b010;
+parameter OUT = 3'b011;
+parameter JMP = 3'b100;
+parameter STA = 3'b101;
+parameter LDI = 3'b110;
+parameter SUB = 3'b111;
+parameter BEQ = 3'b000;
+
 
 reg pc_in;
 reg pc_out;
@@ -23,8 +25,8 @@ reg a_imm_in;
 reg a_out;
 reg b_in;
 reg b_out;
-reg alu_out;
 reg output_in;
+reg alu_op;
 
 reg[3:0] step_limit;
 
@@ -78,7 +80,7 @@ wire[7:0] bus;
 assign bus = 
     pc_out ? pc :
     ram_out ? ram[mar] :
-    ir_out ? ir[3:0] : 
+    ir_out ? ir[4:0] : 
     a_out ? a_reg :
     b_out ? b_reg :
     alu_out ? alu :
@@ -91,23 +93,23 @@ always @(posedge cpu_clk) begin
         pc <= pc + 1;
     end
     if (pc_in) begin 
-        pc <= {4'b0, bus[3:0]};
+        pc <= {3'b0, bus[4:0]};
     end
     
 end
 
 
 // Memory Adress Register
-reg[3:0] mar;
+reg[4:0] mar;
 always @(posedge cpu_clk) begin
     if (mar_in) begin
-        mar <= bus[3:0];      
+        mar <= bus[4:0];      
     end 
 end
 
 
 //RAM
-reg[7:0] ram[16];
+reg[7:0] ram[31];
 always @(posedge cpu_clk) begin
     if (ram_in) begin
         ram[mar] <= bus;
@@ -139,7 +141,7 @@ always @(posedge cpu_clk) begin
         a_reg <= bus;
     end
     else if (a_imm_in) begin
-        a_reg <= {4'b0, bus[3:0]};
+        a_reg <= {3'b0, bus[4:0]};
     end
     
 end
@@ -153,20 +155,14 @@ always @(posedge cpu_clk) begin
 end
 
 //ALU
-reg[7:0] alu;
-reg alu_sub;
-reg [1:0] alu_op;
-always @(posedge cpu_clk) begin
-    
-    if (alu_op == 1) begin
-        alu <= a_reg + b_reg;
-    end
-    else if (alu_op == 2) begin
-        alu <= a_reg - b_reg;
-    end
-    else alu <= a_reg;
-     
-end
+wire [7:0] alu;
+assign alu = (alu_op == 1'b0) ? (a_reg + b_reg) :
+                    (alu_op == 1'b1) ? (a_reg - b_reg) :
+                    a_reg; 
+
+wire zero_flag;
+assign zero_flag = (a_reg == 8'b00000000) ? 1'b1 : 1'b0;
+
 
 
 //Control Unit
@@ -186,6 +182,7 @@ always @(negedge cpu_clk) begin
     b_in <= 0;
     b_out <= 0;
     alu_out <= 0;
+    alu_op <= 1'b0;
     output_in <= 0;
 
     if (step == 1) begin
@@ -198,7 +195,7 @@ always @(negedge cpu_clk) begin
         pc_add <= 1;
     end  
     
-    else if (ir[7:4] == ADD) begin // ADD
+    else if (ir[7:5] == ADD) begin // ADD
     step_limit <= 6;
         if (step == 3) begin
             ir_out <= 1;
@@ -210,12 +207,12 @@ always @(negedge cpu_clk) begin
         end
         else if (step == 6) begin
             alu_out <= 1;
-            alu_op <= 1;
+            alu_op <= 1'b0;
             a_in <= 1;
         end       
     end
     
-    else if (ir[7:4] == SUB) begin // SUB
+    else if (ir[7:5] == SUB) begin // SUB
     step_limit <= 6;
         if (step == 3) begin
             ir_out <= 1;
@@ -226,13 +223,13 @@ always @(negedge cpu_clk) begin
             b_in <= 1;
         end
         else if (step == 6) begin
-            alu_op <= 2;
+            alu_op <= 1'b1;
             alu_out <= 1;
             a_in <= 1;
         end       
     end
 
-    else if (ir[7:4] == LDA) begin // LDA
+    else if (ir[7:5] == LDA) begin // LDA
     step_limit <= 4;
         if (step == 3) begin
             ir_out <= 1;
@@ -244,7 +241,7 @@ always @(negedge cpu_clk) begin
         end
     end
 
-    else if (ir[7:4] == LDI) begin // LDI
+    else if (ir[7:5] == LDI) begin // LDI
         step_limit <= 3;
         if (step == 3) begin
             ir_out <= 1;
@@ -252,7 +249,7 @@ always @(negedge cpu_clk) begin
         end
     end
 
-    else if (ir[7:4] == STA) begin // STA
+    else if (ir[7:5] == STA) begin // STA
     step_limit <= 4;
         if (step == 3) begin
             ir_out <= 1;
@@ -264,7 +261,7 @@ always @(negedge cpu_clk) begin
         end
     end
 
-    else if (ir[7:4] == OUT) begin // OUT
+    else if (ir[7:5] == OUT) begin // OUT
     step_limit <= 3;
         if (step == 3) begin
             a_out <= 1;
@@ -272,7 +269,7 @@ always @(negedge cpu_clk) begin
         end
     end
 
-    else if (ir[7:4] == JMP) begin // JMP
+    else if (ir[7:5] == JMP) begin // JMP
     step_limit <= 3;
         if (step == 3) begin
             ir_out <= 1;
@@ -280,28 +277,37 @@ always @(negedge cpu_clk) begin
         end
     end
 
+    else if (ir[7:5] == BEQ) begin // BEQ
+    step_limit <= 3;
+        if (step == 3) begin
+            if (zero_flag == 1'b1) begin
+                ir_out <= 1;
+                pc_in <= 1;
+            end        
+        end
+    end
        
 end
 
 // Programm
 initial begin
-
-ram[0] = {LDI, 4'h1}; // Fibonacci
-ram[1] = {STA, 4'hD}; 
-ram[2] = {LDI, 4'h0}; 
-ram[3] = {STA, 4'hE};
-ram[4] = {LDA, 4'hD}; 
-ram[5] = {ADD, 4'hE};  
-ram[6] = {OUT, 4'h0}; 
-ram[7] = {STA, 4'hF}; 
-ram[8] = {LDA, 4'hD};
-ram[9] = {STA, 4'hE}; 
-ram[10] = {LDA, 4'hF};  
-ram[11] = {STA, 4'hD}; 
-ram[12] = {JMP, 4'h4}; 
+/*
+ram[0] = {LDI, 5'h1}; // Fibonacci
+ram[1] = {STA, 5'hD}; 
+ram[2] = {LDI, 5'h0}; 
+ram[3] = {STA, 5'hE};
+ram[4] = {LDA, 5'hD}; 
+ram[5] = {ADD, 5'hE};  
+ram[6] = {OUT, 5'h0}; 
+ram[7] = {STA, 5'hF}; 
+ram[8] = {LDA, 5'hD};
+ram[9] = {STA, 5'hE}; 
+ram[10] = {LDA, 5'hF};  
+ram[11] = {STA, 5'hD}; 
+ram[12] = {JMP, 5'h4}; 
 ram[13] = {8'h01};      
 ram[14] = {8'h00};      
-
+*/
 
 /*
 ram[0] = {LDA, 4'h7}; // 2^x
@@ -314,14 +320,24 @@ ram[6] = {JMP, 4'h2};
 ram[7] = {8'h01}; 
 */
 
+
+ram[0] = {LDI, 5'd22};
+ram[1] = {STA, 5'h10};
+ram[2] = {LDA, 5'hD};  
+ram[3] = {OUT, 5'h0}; 
+ram[4] = {ADD, 5'hD}; 
+ram[5] = {STA, 5'hF};
+ram[6] = {SUB, 5'h10};
+ram[7] = {BEQ, 5'hA};
+ram[8] = {LDA, 5'hF};
+ram[9] = {JMP, 5'h3};
+ram[10] = {LDA, 5'hF};
+ram[11] = {OUT, 5'h0};
+ram[12] = {JMP, 5'hC};
+ram[13] = {8'h01}; 
+
+
 /*
-ram[0] = {LDA, 4'h4};  // Count Up
-ram[1] = {OUT, 4'h0}; 
-ram[2] = {ADD, 4'h4}; 
-ram[3] = {JMP, 4'h1};
-ram[4] = {8'h01}; 
-
-
 ram[0] = {LDA, 4'h5};  // Count Down
 ram[1] = {OUT, 4'h0}; 
 ram[2] = {SUB, 4'h4}; 
