@@ -1,6 +1,6 @@
 module cpu(input wire clk, reset, output reg[7:0] output_register, output wire[7:0] bus_viewer);
 
-parameter CLOCK_SPEED = 300000; // 480000 for 1 sec
+//parameter CLOCK_SPEED = 300000; // 480000 for 1 sec
 
 parameter LDA = 3'b001;
 parameter ADD = 3'b010;
@@ -27,8 +27,9 @@ reg b_in;
 reg b_out;
 reg output_in;
 reg alu_op;
+reg alu_out;
 
-reg[3:0] step_limit;
+reg[2:0] step_limit;
 
 assign bus_viewer = bus;
 
@@ -43,7 +44,7 @@ assign bus_viewer = step;
 assign output_register = alu;
 */
 
-
+/*
 //Clock
 reg[31:0] clk_counter;
 reg cpu_clk;
@@ -57,22 +58,26 @@ always @(posedge clk) begin
 
     cpu_clk <= (clk_counter < CLOCK_SPEED/2) ? 1'b1 : 1'b0;
 end
+*/
+
+wire cpu_clk;
+assign cpu_clk = clk;
 
 
 // Instruction Step Counter
-reg[5:0] step;
+reg[2:0] step;
 always @(posedge cpu_clk) begin // negedge ????? 
     if (reset == 1'b1) begin
-        step <= 5'd0;
+        step <= 3'd0;
     end
     else begin
-        step <= step + 5'd1;
+        step <= step + 3'd1;
 
         if (step > step_limit) begin
-            step <= 5'd1;   
+            step <= 3'd1;   
         end
-        else if (step > 7) begin
-            step <= 5'd1;
+        else if (step > 3'd6) begin
+            step <= 3'd1;
         end
     end
   
@@ -85,7 +90,7 @@ wire[7:0] bus;
 assign bus = 
     pc_out ? pc :
     ram_out ? ram[mar] :
-    ir_out ? ir[4:0] : 
+    ir_out ? {3'b000, ir[4:0]} :
     a_out ? a_reg :
     b_out ? b_reg :
     alu_out ? alu :
@@ -117,7 +122,7 @@ end
 
 
 //RAM
-reg[7:0] ram[32];
+reg[7:0] ram[18];
 always @(posedge cpu_clk) begin
     if (ram_in) begin
         ram[mar] <= bus;
@@ -193,11 +198,13 @@ always @(negedge cpu_clk) begin
     alu_op <= 1'b0;
     output_in <= 1'b0;
 
-    if (step == 5'd1) begin
+    step_limit <= step_limit;
+
+    if (step == 3'd1) begin
         pc_out <= 1'b1;
         mar_in <= 1'b1;
     end
-    else if (step == 5'd2) begin
+    else if (step == 3'd2) begin
         ram_out <= 1'b1;
         ir_in <= 1'b1;
         pc_add <= 1'b1;
@@ -205,15 +212,15 @@ always @(negedge cpu_clk) begin
     
     else if (ir[7:5] == ADD) begin // ADD
     step_limit <= 3'd6;
-        if (step == 5'd3) begin
+        if (step == 3'd3) begin
             ir_out <= 1'b1;
             mar_in <= 1'b1;
         end
-        else if (step == 5'd4) begin
+        else if (step == 3'd4) begin
             ram_out <= 1'b1;
             b_in <= 1'b1;
         end
-        else if (step == 5'd6) begin
+        else if (step == 3'd6) begin
             alu_out <= 1'b1;
             alu_op <= 1'b0;
             a_in <= 1'b1;
@@ -222,15 +229,15 @@ always @(negedge cpu_clk) begin
     
     else if (ir[7:5] == SUB) begin // SUB
     step_limit <= 3'd6;
-        if (step == 5'd3) begin
+        if (step == 3'd3) begin
             ir_out <= 1'b1;
             mar_in <= 1'b1;
         end
-        else if (step == 5'd4) begin
+        else if (step == 3'd4) begin
             ram_out <= 1'b1;
             b_in <= 1'b1;
         end
-        else if (step == 5'd6) begin
+        else if (step == 3'd6) begin
             alu_op <= 1'b1;
             alu_out <= 1'b1;
             a_in <= 1'b1;
@@ -239,11 +246,11 @@ always @(negedge cpu_clk) begin
 
     else if (ir[7:5] == LDA) begin // LDA
     step_limit <= 3'd4;
-        if (step == 5'd3) begin
+        if (step == 3'd3) begin
             ir_out <= 1'b1;
             mar_in <= 1'b1;
         end
-        else if (step == 5'd4) begin
+        else if (step == 3'd4) begin
             ram_out <= 1'b1;
             a_in <= 1'b1;
         end
@@ -251,7 +258,7 @@ always @(negedge cpu_clk) begin
 
     else if (ir[7:5] == LDI) begin // LDI
         step_limit <= 3'd3;
-        if (step == 5'd3) begin
+        if (step == 3'd3) begin
             ir_out <= 1'b1;
             a_imm_in <= 1'b1;
         end
@@ -259,7 +266,7 @@ always @(negedge cpu_clk) begin
 
     else if (ir[7:5] == STA) begin // STA
     step_limit <= 3'd4;
-        if (step == 5'd3) begin
+        if (step == 3'd3) begin
             ir_out <= 1'b1;
             mar_in <= 1'b1;
         end
@@ -271,7 +278,7 @@ always @(negedge cpu_clk) begin
 
     else if (ir[7:5] == OUT) begin // OUT
     step_limit <= 3'd3;
-        if (step == 5'd3) begin
+        if (step == 3'd3) begin
             a_out <= 1'b1;
             output_in <= 1'b1;
         end
@@ -279,7 +286,7 @@ always @(negedge cpu_clk) begin
 
     else if (ir[7:5] == JMP) begin // JMP
     step_limit <= 3'd3;
-        if (step == 5'd3) begin
+        if (step == 3'd3) begin
             ir_out <= 1'b1;
             pc_in <= 1'b1;
         end
@@ -287,7 +294,7 @@ always @(negedge cpu_clk) begin
 
     else if (ir[7:5] == BEQ) begin // BEQ
     step_limit <= 3'd3;
-        if (step == 5'd3) begin
+        if (step == 3'd3) begin
             if (zero_flag == 1'b1) begin
                 ir_out <= 1'b1;
                 pc_in <= 1'b1;
@@ -300,7 +307,7 @@ end
 // Programm
 initial begin
 
-
+/*
 ram[0] = {LDI, 5'h1}; // Fibonacci
 ram[1] = {STA, 5'hD}; 
 ram[2] = {LDI, 5'h0}; 
@@ -316,7 +323,7 @@ ram[11] = {STA, 5'hD};
 ram[12] = {JMP, 5'h4}; 
 ram[13] = {8'h01};      
 ram[14] = {8'h00};      
-
+*/
 
 /*
 ram[0] = {LDA, 4'h7}; // 2^x
@@ -329,8 +336,8 @@ ram[6] = {JMP, 4'h2};
 ram[7] = {8'h01}; 
 */
 
-/*
-ram[0] = {LDI, 5'd24};
+
+ram[0] = {LDI, 5'd17};
 ram[1] = {STA, 5'h10};
 ram[2] = {LDA, 5'hD};  
 ram[3] = {OUT, 5'h0}; 
