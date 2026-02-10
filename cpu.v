@@ -1,4 +1,4 @@
-module cpu(input clk, button, output reg[7:0] output_register, output reg[7:0] bus_viewer);
+module cpu(input wire clk, reset, output reg[7:0] output_register, output wire[7:0] bus_viewer);
 
 parameter CLOCK_SPEED = 300000; // 480000 for 1 sec
 
@@ -30,11 +30,10 @@ reg alu_op;
 
 reg[3:0] step_limit;
 
+assign bus_viewer = bus;
 
-always @(posedge clk) begin
-    bus_viewer <= bus;
 
-end
+
 
 
 /*
@@ -63,14 +62,20 @@ end
 // Instruction Step Counter
 reg[5:0] step;
 always @(posedge cpu_clk) begin // negedge ????? 
-    step <= step + 5'd1;
+    if (reset == 1'b1) begin
+        step <= 5'd0;
+    end
+    else begin
+        step <= step + 5'd1;
 
-    if (step > step_limit) begin
-        step <= 5'd1;   
+        if (step > step_limit) begin
+            step <= 5'd1;   
+        end
+        else if (step > 7) begin
+            step <= 5'd1;
+        end
     end
-    else if (step > 7) begin
-        step <= 5'd1;
-    end
+  
 end
 
 
@@ -89,10 +94,13 @@ assign bus =
 // Programm Counter
 reg[7:0] pc;
 always @(posedge cpu_clk) begin
-    if (pc_add) begin
+    if (reset == 1'b1) begin
+        pc <= 8'b00000000;
+    end
+    else if (pc_add) begin
         pc <= pc + 1'b1;
     end
-    if (pc_in) begin 
+    else if (pc_in) begin 
         pc <= {3'b0, bus[4:0]};
     end
     
@@ -292,6 +300,7 @@ end
 // Programm
 initial begin
 
+
 ram[0] = {LDI, 5'h1}; // Fibonacci
 ram[1] = {STA, 5'hD}; 
 ram[2] = {LDI, 5'h0}; 
@@ -321,7 +330,7 @@ ram[7] = {8'h01};
 */
 
 /*
-ram[0] = {LDI, 5'd11};
+ram[0] = {LDI, 5'd24};
 ram[1] = {STA, 5'h10};
 ram[2] = {LDA, 5'hD};  
 ram[3] = {OUT, 5'h0}; 

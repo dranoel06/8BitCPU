@@ -13,7 +13,7 @@ module top(input clk, button_in, output [6:0] display, output [3:0] digit_select
     // Instanzierung von cpu
     cpu cpu0(
         .clk(clk),
-        .button(button_wire),
+        .reset(button_wire),
         .output_register(signal),
         .bus_viewer(bus_viewer)
 
